@@ -1,0 +1,63 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: coach
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  livekit:
+    image: livekit/livekit-server
+    command: --dev --config /etc/livekit.yaml
+    ports:
+      - "7800:7800"
+      - "7801:7801"
+      - "7880:7880"
+    volumes:
+      - ./livekit.yaml:/etc/livekit.yaml
+
+  backend:
+    build: ./backend
+    environment:
+      - DATABASE_URL=postgresql://user:password@db:5432/coach
+      - LIVEKIT_API_KEY=devkey
+      - LIVEKIT_API_SECRET=secret
+      - LIVEKIT_URL=http://livekit:7880
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+      - livekit
+
+  agent:
+    build: ./backend
+    command: python -m app.agent.coach dev
+    environment:
+      - LIVEKIT_API_KEY=devkey
+      - LIVEKIT_API_SECRET=secret
+      - LIVEKIT_URL=ws://livekit:7880
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+    depends_on:
+      - backend
+      - livekit
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        - VITE_LIVEKIT_URL=ws://localhost:7880
+        - VITE_API_URL=http://localhost:8000
+    ports:
+      - "5173:80"
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:

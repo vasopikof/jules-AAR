@@ -1,0 +1,10 @@
+fastapi
+uvicorn
+sqlalchemy
+psycopg2-binary
+livekit
+livekit-agents
+livekit-plugins-google
+google-generativeai
+python-dotenv
+pydantic
